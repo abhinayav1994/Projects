@@ -1,0 +1,115 @@
+@@ -0,0 +1,114 @@
+#Importing packages
+
+library(corrplot)
+library(tidyverse)
+library(ggplot2)
+library(psych)
+library(car)
+library(caTools)
+#Data importing
+hair <- read.csv("/Users/avenkatramanan/Desktop/Programming data/Factor-Hair-Revised.csv", header = T)
+variables <- c("Product Quality" , "E-Commerce" , "Technical Support" , "Complaint Resolution" ,
+               "Advertising" , "Product Line" , "Salesforce Image", "Competitive Pricing" ,
+               "Warranty & Claims" , "Order & Billing" , "Delivery Speed" , "Customer Satisfaction")
+# to check the dimension of dataset
+dim(hair)
+# to check the structure of dataset
+str(hair)
+#To find the cummary of dat
+summary(hair)
+#Renaming the data since ID is a column number
+hair0 <- hair[,-1]
+#changing the names of variables
+colnames(hair0) <- variables
+attach(hair0)
+#missing data
+sum(is.na(hair0))
+#Histogram of variable - customer satisfaction
+hist (`Customer Satisfaction`, breaks = c(0:11),labels = T,
+      include.lowest=T, right=T,
+      col=8, border=1,
+      main = paste("Histogram of Customer Satisfaction"),
+      xlab= "Customer Satisfaction", ylab="COUNT")
+#Box plt of target variable - customer satisfaction
+boxplot(`Customer Satisfaction`, horizontal = T, xlab = variables[12], ylim=c(0,11))
+#to list down the outliers in dataset
+list("OutLiers")
+OutLiers <- hair0[(1:12),]
+for (i in c(1:12))
+  {
+
+  Box_Plot <- boxplot(hair0[,I],plot = F)$out
+  OutLiers[,i] <- NA
+
+  if (length(Box_Plot)>0) {
+    OutLiers[(1:length(Box_Plot)),i] <- Box_Plot
+    OutLiers <- OutLiers[(1:6),]
+  }
+# Write outliers list in csv
+write.csv(OutLiers, "OutLiers.csv")
+
+# Bivariate Analysis
+# Scatter Plot of independent variables against the Target Variable
+par(mfrow = c(4,3))
+
+for (i in c(1:11))
+  {
+  plot(hair0[,I],`Customer Satisfaction`,
+       xlab = variables[i], ylab = NULL,
+       cex.lab=1, cex.axis=1, cex.main=1, cex.sub=1)
+  }
+corlnMtrx <- cor(hair0[,-12])
+corlnMtrx
+
+# Check multicollinearity in independent variables using VIF
+vifmatrix <- vif(lm(`Customer Satisfaction` ~., data = hair0))
+vifmatrix
+write.csv(vifmatrix, "vifmatrix.csv")
+## Chech corlnMtrx with Bartlett Test
+cortest.bartlett(corlnMtrx, 100)
+# If P-value less than 0.05 then it is ideal case for dimention reduction.
+# Kaiser-Meyer-Olkin (KMO) Test is a measure of how suited your data is for Factor Analysis.
+KMO(corlnMtrx)
+#Calculating the Eigen values
+A <- eigen(corlnMtrx)
+EV <- A$values
+EV 
+# Ploting scree plot and adding lines.
+plot(EV, main = "Scree Plot", xlab = "Factors", ylab = "Eigen Values", pch = 20, col = "blue")
+lines(EV, col = "red"),
+abline(h = 1, col = "green", lty = 2)
+# As per the above scree plot extracting 4 factors from 11 variables Without rotating
+FourFactor1 = fa(r= hair0[,-12], nfactors =4, rotate ="none", fm ="pa")
+print(FourFactor1)
+Loading1 <- print(FourFactor1$loadings,cutoff = 0.3)
+# With varimax rotating
+FourFactor2 = fa(r= hair0[,-12], nfactors =4, rotate ="varimax", fm ="pa")
+print(FourFactor2)
+Loading2 <- print(FourFactor2$loadings,cutoff = 0.3)
+write.csv(Loading2, "Loading2.csv")
+fa.diagram(FourFactor2)
+# Name the columns for hair2
+colnames(hair2) <- c("Cust.Satisf", "Sales.Distri", "Marketing","After.Sales.Service","Value.For.Money")
+head(hair2)   #Check head of the data
+class(hair2)   #Check class of the hair2
+hair2 <- as.data.frame(hair2)  # convert matrix to data.frame
+set.seed(1) #setting flag for randomness
+# creating two datasets one to train the model and  another to test the model.
+spl = sample.split(hair2$Cust.Satisf, SplitRatio = 0.8)
+Train = subset(hair2, spl==T)
+Test = subset(hair2, spl==F)
+cat(" Train Dimention: ", dim(Train) ,"\n", "Test Dimention : ", dim(Test))  #check dimentions of Train and Test Data
+linearModel = lm(Cust.Satisf ~., data = Train)
+summary(linearModel)
+vif(linearModel)
+pred = predict(linearModel, newdata = Test)
+# Compute R-sq for the test data
+SST = sum((Test$Cust.Satisf - mean(Train$Cust.Satisf))^2)
+SSE = sum((pred - Test$Cust.Satisf)^2)
+SSR = sum((pred - mean(Train$Cust.Satisf))^2)
+R.square.test <- SSR/SST
+cat(" SST :", SST, "\n",
+    "SSE :", SSE, "\n",
+    "SSR :", SSR, "\n",
+    "R squared Test :" , R.square.test)
