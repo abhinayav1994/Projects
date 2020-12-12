@@ -1,0 +1,161 @@
+@@ -0,0 +1,161 @@
+#install.packages("caret, repos = http://cran.us.r-project.org")
+#install.packages("rpart, repos = http://cran.us.r-project.org")
+#install.packages("rpart.plot, repos = http://cran.us.r-project.org")
+#install.packages("randomForest, repos = http://cran.us.r-project.org")
+
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+
+data <-read.csv("/Users/avenkatramanan/Desktop/Programming data/Thera Bank_dataset.csv")
+dim(data)
+str(data) 
+
+colnames(data)<-c('ID','Age_in_years','Experience(years)','Income_Monthly','Zip_code','Family_members','CCAvg','Education','Mortgage','Personal_loan','Securities_Account','CD_Account','Online','CreditCard')
+head(data)
+prop.table(table(data$Personal_loan))*100
+
+## Univariate analysis
+hist(data$Age_in_years,
+     main = "Histogram of Age",
+     xlab = "Age in Years")
+
+##Converting Zipcodes/Familymembers/Education/Mortgage/PersonalLoan/SecuritiesAccount/CD Account/Online/Creditcard to factors
+
+data$Zip_code<-as.factor(data$Zip_code)
+data$Family_members<-as.factor(data$Family_members)
+data$Education<-as.factor(data$Education)
+data$Personal_loan<-as.factor(data$Personal_loan)
+data$Securities_Account<-as.factor(data$Securities_Account)
+data$CD_Account<-as.factor(data$CD_Account)
+data$Online<-as.factor(data$Online)
+data$CreditCard<-as.factor(data$CreditCard) 
+
+# Grouped Bar Plot between family members and loans
+counts <- table(data$Family_members, data$Personal_loan)
+barplot(counts, main="Family members vs Personal Loan",
+        xlab="Personal Loan No vs Yes", col=c("darkblue","red","green","yellow"),
+        legend = rownames(counts), beside=TRUE)
+
+#Grouped Barplot between the education category and the loans
+counts <- table(data$Education, data$Personal_loan)
+barplot(counts, main="Education Category vs Personal Loan",
+        xlab="Personal Loan No vs Yes", col=c("darkblue","red","green"),
+        legend = c("1 Undergrad", "2 Graduate","3 Advanced/Professional"), beside=TRUE)
+
+#correlatiob between various features
+my_data <- data[, c(2,3,4,7,9)]
+res <- cor(my_data)
+round(res, 2)
+
+#Cluster analysis
+wss <- (nrow(my_data)-1)*sum(apply(my_data,2,var))
+for(i in 2:15)wss[i]<- sum(fit=kmeans(my_data,centers=i,15)$withinss)
+plot(1:15,wss,type="b",main="15 clusters",xlab="no. of clusters",ylab="with cluster sum")
+
+#Kmeans clustering
+fit <- kmeans(my_data,4)
+library(cluster)
+library(fpc)
+plotcluster(my_data,fit$cluster)
+points(fit$centers,col=1:9,pch=18)
+
+mydata <- data.frame(my_data,fit$cluster)
+cluster_mean <- aggregate(mydata,by = list(fit$cluster),FUN = mean)
+cluster_mean
+##As Kmeans is prone to outliers reclustering them
+
+my_data2<-my_data
+outliers3 <- boxplot(my_data2$Income_Monthly, plot=FALSE)
+outliers3<-outliers3$out
+my_data2 <- my_data2[-which(my_data2$Income_Monthly %in% outliers3),]
+outliers4 <- boxplot(my_data2$CCAvg, plot=FALSE)
+outliers4<-outliers4$out
+my_data2 <- my_data2[-which(my_data2$CCAvg %in% outliers4),]
+outliers5 <- boxplot(my_data2$Mortgage, plot=FALSE)
+outliers5<-outliers5$out
+my_data2 <- my_data2[-which(my_data2$Mortgage %in% outliers5),]
+nrow(my_data2)
+
+#to clearly identify the outliers 
+wss <- (nrow(my_data2)-1)*sum(apply(my_data2,2,var))
+for(i in 2:15)wss[i]<- sum(fit2=kmeans(my_data2,centers=i,15)$withinss)
+plot(1:15,wss,type="b",main="15 clusters",xlab="no. of clusters",ylab="with cluster sum")
+
+fit2<-kmeans(my_data2,5)
+my_data3 <- data.frame(my_data2)
+cluster_mean_2 <- aggregate(my_data3,by = list(fit2$cluster),FUN = mean)
+cluster_mean_2
+my_data2$cluster<-fit2$cluster
+
+#Import dyplr package
+library(dplyr)
+head(my_data2)
+index<-as.integer(row.names.data.frame(my_data2))
+Personal_loan<-base_data[index,10]
+my_data2$Personal_loan<-Personal_loan
+head(my_data2)
+
+#Cart and RandomForest algorithm
+set.seed(111)
+trainIndex <- createDataPartition(Personal_loan,
+                                  p=0.7,
+                                  list = FALSE,
+                                  times = 1)
+train.data <- data[trainIndex,2:length(base_data) ]
+test.data  <- data[-trainIndex,2:length(base_data) ]
+r.ctrl <- rpart.control(minsplit = 100,
+                        minbucket = 10,
+                        cp = 0,
+                        xval = 10
+)
+
+#Exclude columns - "Customer ID" and "Acct Opening Date"
+cart.train <- train.data
+m1 <- rpart(formula = Personal_loan~.,
+            data = cart.train,
+            method = "class",
+            control = r.ctrl
+)
+
+#install.packages("rattle") 
+#install.packages("RColorBrewer") 
+library(rattle) 
+library(RColorBrewer) 
+fancyRpartPlot(m1) 
+library(RColorBrewer) 
+fancyRpartPlot(m1) 
+
+## Scoring Holdout sample 
+cart.test <- test.data
+cart.test$predict.class = predict(ptree, cart.test,type = "class")
+x<-cart.test$Personal_loan
+cart.test$predict.score = predict(ptree, cart.test, type = "prob")
+library(caret)
+confusionMatrix(table(as.factor(x),cart.test$predict.class ))
+
+#Random forest technique
+library(randomForest)
+library(caret)
+library(e1071)
+trainIndex <- createDataPartition(Personal_loan,
+                                  p=0.7,
+                                  list = FALSE,
+                                  times = 1)
+data_2<-data[,-5]
+train.data <- data_2[trainIndex,2:length(data_2) ]
+colnames(train.data)<-c('Age_in_years','Experience_years','Income_Monthly','Family_members','CCAvg','Education','Mortgage',
+                        'Personal_loan','Securities_Account','CD_Account','Online','CreditCard')
+train.data$Personal_loan<-as.factor(train.data$Personal_loan)
+train.data<-na.omit(train.data)
+test.data  <- data_2[-trainIndex,2:length(data_2) ]
+colnames(test.data)<-c('Age_in_years','Experience_years','Income_Monthly','Family_members','CCAvg','Education','Mortgage',
+                       'Personal_loan','Securities_Account','CD_Account','Online','CreditCard')
+test.data<-na.omit(test.data)
+test.data$Personal_loan<-as.factor(test.data$Personal_loan)
+model1 <- randomForest(Personal_loan ~ ., ntree = 100,data = train.data, importance = TRUE)
+model1
+Pred_rf <- predict(model1, test.data, type = 'class')
+confusionMatrix(test.data$Personal_loan, Pred_rf)
