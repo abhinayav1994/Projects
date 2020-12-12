@@ -1,0 +1,109 @@
+@@ -0,0 +1,108 @@
+setwd("C:/Users/avenkatramanan/Documents")
+getwd()
+mydata <- read.csv("cars.csv")
+View (mydata)
+install.packages("ggplot2")
+library(ggplot2)
+install.packages("CNAnorm")
+library(CNAnorm)
+install.packages("tidyr")
+library(tidyr)
+install.packages("corrplot")
+Transport <- as.factor("Transport")
+Gender <- as.factor("Gender")
+Engineer <- as.factor("Engineer")
+MBA <- as.factor("MBA")
+license <- as.factor("license")
+#For cars vs other means of transport
+mydata$Transport <- ifelse(mydata$Transport =="Car",1,0)
+View (mydata$Transport) # to view transport where the mode is car
+str(mydata)
+plot(mydata)
+library(tidyr)
+mydata <- drop_na(mydata) # dropping all null values
+summary(mydata)
+#finding the outlier in data
+boxplot(mydata$Age ~mydata$Engineer, main = "Age vs Eng.")
+boxplot(mydata$Age ~mydata$MBA, main ="Age Vs MBA")
+boxplot(mydata$Salary ~mydata$Engineer, main = "Salary vs Eng.")
+boxplot(mydata$Salary ~mydata$MBA, main = "Salary vs MBA.")
+boxplot(mydata$Work.Exp ~ mydata$Gender)
+boxplot(mydata$Salary~mydata$Transport, main="Salary vs Transport")
+# to find the number of people using various modes of transports with and without license
+table(mydata$license,mydata$Transport)
+#to find the info about cars by gender
+table(mydata$Gender)
+#Gender vs Transport  (facet_wrap):
+ggplot(mydata, aes(x= Gender))  + theme_bw()+
+  facet_wrap(Transport ) + geom_bar()
+# Cars vs gender:
+prop.table(table(mydata$Gender))
+ggplot(mydata, aes(x=Work.Exp)) + geom_histogram(binwidth = 1)
+ggplot(mydata, aes(x=Transport)) + geom_bar() + theme_bw()
+ggplot(mydata, aes(x=Gender, fill= Transport)) + geom_bar()
+#Age & Transport as car:
+ggplot(mydata, aes(x=Transport))
+ggplot(mydata, aes(x=Age)) + geom_histogram(binwidth = 6)
+ggplot(mydata, aes(x=Age)) + geom_histogram(binwidth = 1) +
+  facet_wrap(~Transport)
+#license & Transport as car:
+ggplot(mydata, aes(x=license)) + geom_bar()
+nrow(mydata)
+ggplot(mydata, aes(x=license)) + geom_bar()  + facet_wrap(~Transport)
+table(mydata$Transport)
+#Split the data:
+# Hypothesis test:
+logit <- lm(formula=mydata$Transport~., data=mydata)
+summary(logit)
+# Age & License are significant
+#CART Model:
+## setting the control paramter inputs for rpart:
+#convert the response variable(target) to factor to perform classification.
+Transport <- as.character(mydata$Transport)
+Gender <- as.character(mydata$Gender)
+Engineer <- as.character(mydata$Engineer)
+MBA <-  as.character(mydata$MBA)
+license <-  as.character(mydata$license)
+Age <-  as.character(mydata$Age)
+install.packages("rpart")
+install.packages("rpart.plot")
+library(rpart)
+library(rpart.plot)
+ctrl = rpart.control(minsplit=100, minbucket = 10, cp = 0, xval = 10)
+destree <- rpart(formula = mydata$Transport ~ .,
+                 data = mydata, method = "class",
+                 control =ctrl)
+rpart.plot(destree)
+fancyRpartPlot(destree)
+printcp(destree)
+plotcp(destree)
+#Predicting the test set results:
+ypred1 <- predict(destree, mydata, type="prob")
+ypred1<-as.data.frame(ypred1)
+ycm1<-as.data.frame(ypred1)
+ypred1<-ifelse(ypred1$`1`>ypred1$`0`,ypred1$`1`,ypred1$`0`)
+y_cm1<-ifelse(ycm1$`1`>ycm1$`0`,1,0)
+#Create a train and test data on transport random <- createDataPartition(Cars$Transport, p=0.70, list=FALSE) cars_train <- Cars[ random,] cars_test <- Cars[-random,]
+set.seed(100)
+library(caret)
+pd=sample(2,nrow(mydata),replace=TRUE,prob = c(0.7,0.3))
+train=mydata[pd==1,]
+test=mydata[pd==2,]
+test$Salary = log(test$Salary)
+test$Engineer = as.factor(test$Engineer)
+test$MBA = as.factor(test$MBA)
+test$license = as.factor(test$license)
+random <- createDataPartition(mydata$Transport, p=0.70, list=FALSE)
+cars_train <- mydata[ random,]
+cars_test <- mydata[-random,]
+#NAÏVE BAYES
+install.packages("e1071")
+library(e1071)
+Naive_Bayes_Model=naiveBayes(cars_train$Transport ~., data=cars_train)
+Naive_Bayes_Model
+NB_Predictions=predict(Naive_Bayes_Model,cars_test)
+table(NB_Predictions,cars_test$Transport)
+#Confusion Matrix:
+cm1=table(mydata[,1],y_cm1)
+cm1
