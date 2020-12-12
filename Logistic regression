@@ -1,0 +1,68 @@
+@@ -0,0 +1,68 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jul 20 17:11:36 2018
+
+@author: LENOVO
+"""
+
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# Importing library for logistic regression
+from sklearn.linear_model import LogisticRegression
+
+# Importing performance metrics - accuracy score & confusion matrix
+from sklearn.metrics import accuracy_score,confusion_matrix
+data=pd.read_csv('crashTest.csv')
+print(np.unique(data['CarType']))
+# selecting the species for classification
+required_cartype=['Hatchback', 'SUV']
+
+# Extracting data for species - Iris-setosa, Iris-versicolor
+data=data[data['CarType'].isin(required_cartype)]
+
+# dropping the  column named - Id
+data=data.drop(['ID'],axis=1)
+
+# Reindexing the species names to 0,1
+data['CarType']=data['CarType'].map({'Hatchback':0, 
+                                             'SUV':1})
+
+print(data['CarType'])
+data_columns_list=list(data.columns)
+print(data_columns_list)
+
+# Separating the input names from species
+features=list(set(data_columns_list)-set(['CarType']))
+print(features)
+
+# Storing the output values in y
+y=data['CarType'].values
+print(y)
+
+# Storing the values from input features
+x = data[features].values
+
+# Splitting the data into train and test
+train_x,test_x,train_y,test_y = train_test_split(x,y, 
+                                    test_size=0.3, random_state=0) ##the 70% and 30% with respect to the train and the test data
+
+# Data scaling
+scaler = StandardScaler()
+
+# Fit on training set only.
+scaler.fit(train_x)
+
+# Apply transform to both the training set and the test set.
+train_x = scaler.transform(train_x)
+test_x = scaler.transform(test_x)
+##make an instance of the model
+logistic= LogisticRegression() ##logistic regression is done only for two variables 
+logistic.fit(train_x, train_y)
+prediction= logistic.predict(test_x)
+confusion_matrix= confusion_matrix(test_y, prediction)
+print(confusion_matrix)
+print('Misclassified sample: %d' %(test_y!= prediction).sum())
