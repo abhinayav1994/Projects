@@ -29,11 +29,11 @@ event_time.head()
 import time
 import datetime as dt
 from datetime import timezone
-data['trackTime']=data['trackTime'].astype(int)
-print(data['trackTime'])
+#data['trackTime']=data['trackTime'].astype(int)
+#print(data['trackTime'])
 #data['trackTime'] = data['trackTime'].apply(lambda t: time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(t)))
-data['trackTime'] = pd.to_datetime(data['trackTime']) \
-                     .dt.strftime('%Y-%m-%d %H:%M:%S')
+#data['trackTime'] = pd.to_datetime(data['trackTime']) \
+                    # .dt.strftime('%Y-%m-%d %H:%M:%S')
 print(data['trackTime'])
 data_1 = pd.read_csv('pages.csv')
 data_1.info()
@@ -43,22 +43,16 @@ data_1 = data_1.dropna()
 print(data_1)
 data_1 = pd.DataFrame(data_1)
 
-# Group by User ID:
-event_time_1= data_1.groupby(['userId']).sum().reset_index()
-event_time_1.head()
 
-import time
-import datetime as dt
-from datetime import timezone
-data_1['trackTime']=data_1['trackTime'].astype(int)
-print(data_1['trackTime'])
-#data['trackTime'] = data['trackTime'].apply(lambda t: time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(t)))
-data_1['trackTime'] = pd.to_datetime(data_1['trackTime']) \
-                     .dt.strftime('%Y-%m-%d %H:%M:%S')
-                     
-print(data_1['trackTime'])
+import datetime
+data_1['trackTime_1'] = pd.to_datetime(data_1['trackTime'],format ='%Y-%m-%d %H:%M:%S')
+print(data_1['trackTime_1'])
+# Group by User ID:
+avgTime=datetime.datetime.strftime(datetime.datetime.fromtimestamp(sum(map(datetime.datetime.timestamp,data_1['trackTime_1']))/len(data_1['trackTime_1'])),"%H:%M:%S")
+#event_time_1.head()
 # counting unique values
 n = len(pd.unique(data_1['userId']))
+
   
 print("No.of.unique values :", 
       n)
@@ -66,7 +60,6 @@ data_1.groupby(['userId'])['page'].describe()[['count']]
 data_1.page.str.count("Booking Successful Page")
 data_1.page.str.count("Booking Successful Page").sum()
 
-
-
 data_1['page'].value_counts()
+
 
