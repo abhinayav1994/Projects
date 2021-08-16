@@ -1,0 +1,72 @@
+# -*- coding: utf-8 -*-
+"""
+Spyder Editor
+
+This is a temporary script file.
+"""
+
+# Imports 
+import pandas as pd
+import os
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import seaborn as sns
+import numpy as np
+# Read dataset and preview
+os.chdir("/Users/nitinchandra/Downloads")
+data = pd.read_csv('events.csv')
+# Exploring data
+data.info()
+# Count null features in the dataset
+data.isnull().sum()
+# Replace the null features with 0:
+data.fillna(0, inplace=True) # Re-check N/A was replaced with 0.
+data.info()
+# Group by User ID:
+event_time= data.groupby(['userId']).sum().reset_index()
+event_time.head()
+
+import time
+import datetime as dt
+from datetime import timezone
+data['trackTime']=data['trackTime'].astype(int)
+print(data['trackTime'])
+#data['trackTime'] = data['trackTime'].apply(lambda t: time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(t)))
+data['trackTime'] = pd.to_datetime(data['trackTime']) \
+                     .dt.strftime('%Y-%m-%d %H:%M:%S')
+print(data['trackTime'])
+data_1 = pd.read_csv('pages.csv')
+data_1.info()
+# Replace the null features with 0:
+# drop all rows with any NaN and NaT values
+data_1 = data_1.dropna()
+print(data_1)
+data_1 = pd.DataFrame(data_1)
+
+# Group by User ID:
+event_time_1= data_1.groupby(['userId']).sum().reset_index()
+event_time_1.head()
+
+import time
+import datetime as dt
+from datetime import timezone
+data_1['trackTime']=data_1['trackTime'].astype(int)
+print(data_1['trackTime'])
+#data['trackTime'] = data['trackTime'].apply(lambda t: time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(t)))
+data_1['trackTime'] = pd.to_datetime(data_1['trackTime']) \
+                     .dt.strftime('%Y-%m-%d %H:%M:%S')
+                     
+print(data_1['trackTime'])
+# counting unique values
+n = len(pd.unique(data_1['userId']))
+  
+print("No.of.unique values :", 
+      n)
+data_1.groupby(['userId'])['page'].describe()[['count']]
+data_1.page.str.count("Booking Successful Page")
+data_1.page.str.count("Booking Successful Page").sum()
+
+
+
+data_1['page'].value_counts()
+
