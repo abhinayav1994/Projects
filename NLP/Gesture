@@ -1,0 +1,255 @@
+import numpy as np
+import pandas as pd
+print(pd.__version__)
+#importing the required packages
+from google.colab import drive
+import os
+import csv
+import sys
+csv.field_size_limit(sys.maxsize)
+from os.path import join, getsize
+from sklearn.metrics import mean_squared_error
+from numpy import mean, sqrt, square, arange
+
+def statistical_features(data):
+  columns = data.columns
+  k=[]
+
+  for i in columns:
+    mean = data[i].mean()
+    k.append(mean)
+    median = data[i].median()
+    k.append(median)
+    std = data[i].std()
+    k.append(std)
+    skew = data[i].skew()
+    k.append(skew)
+    rms_value = np.sqrt(np.mean(np.square(data[i])))
+    k.append(rms_value)
+    var = data[i].var()
+    k.append(var)
+    kurt = data[i].kurtosis()
+    k.append(kurt)
+  return k
+  
+  def flatten(test):
+  results = []
+  for sublist in test:
+    for items in sublist:
+      results.append(items)
+  return results
+  
+  def sample_points(data):
+  df = data.sample(n=10, replace=True)
+  columns = data.columns
+  val = []
+  for i in columns :
+    q = df[i].tolist()
+    val.append(q)
+  val = flatten(val)
+  return val
+  
+  df=pd.DataFrame(columns=['F'+str(x) for x in range (1,53)])
+home_path = os.chdir("/content/drive/MyDrive/gestures-dataset")
+from dask.base import compute
+import glob
+
+data_points = []
+#df = pd.DataFrame(np.random.randn(1,52), columns=col_list)
+#print(df)
+#print("Current Working Directory " , os. getcwd())
+#changed the working directory path
+
+home_path = os.getcwd()
+directory= os.listdir()
+for dir in directory:
+ path = home_path + '/' + dir
+ os.chdir(home_path + '/' + dir)
+ directory_1 = os.listdir(path)
+ for sub_directory in directory_1:
+   path_1 = home_path + '/' +dir+'/'+ sub_directory
+   os.chdir(home_path + '/' +dir+'/'+ sub_directory)
+   path_1 = os.listdir(path_1)
+   for file_name in path_1:
+     file_path = print(home_path + '/' +dir+'/'+ sub_directory+'/'+file_name)
+     data = pd.read_csv(home_path + '/' +dir+'/'+ sub_directory+'/'+file_name,sep = " ")
+     data.columns = ['Time1','Time2','Time3','Roll','Pitch','Yaw']
+     data = data.drop(['Time1','Time2','Time3'],axis = 1)
+     print(data)
+     Sample = []
+     Stats = statistical_features(data)
+     #Stats = list(Stats)
+     data_points = sample_points(data)
+     #data_points = list(data_points)
+     Sample = Stats+data_points+[sub_directory]
+     df_test = pd.DataFrame([Sample],columns=['F'+str(x) for x in range(1,53)])
+     df=pd.concat([df,df_test])
+     #filenames = os.path.basename(home_path + '/' +dir+'/'+ sub_directory+'/'+file_name)
+     #for file_name in filenames:
+      # Sample = []
+       #Stats = statistical_features(data)
+       #Stats = list(Stats)
+       #data_points = sample_points(data)
+       #data_points = list(data_points)
+       #Sample = Stats+data_points
+       #print(Sample)
+       #df.append(Sample)
+       #print(df)
+       #Sample = []
+       #Stats = statistical_features(df)
+       #Stats = list(Stats)
+       #Stats = np.expand_dims(Stats, axis=1)
+       #Stats = flatten(stat_feat(data))
+       #data_points = sample_points(df)
+       #data_points = list(data_points)
+       #data_points = flatten(sample_points(data))
+       #data_points = np.array(data_points)[:, None]
+       #Sample = Stats+data_points
+     #data_points=statistical_features(data)
+     #data_points.append(sample_points(data))
+     #data_points.append(sub_directory+' '+file_name)
+     #df.append(data_points)
+     #test = pd.DataFrame([Sample],columns=col_list)
+     #print(test)
+     #d = []
+     #for p in file_name:
+      # d.append([Sample])
+
+df.reset_index(drop=True)
+
+df
+
+from sklearn.preprocessing import StandardScaler #preprocessing library
+from sklearn.decomposition import PCA as sklearnPCA #PCA library
+
+#creating a list of columns from original data
+data_columns_list=list(df.columns)
+# Creating the list of variables representing 'Input/Feature space
+Input_column_list=list(set(data_columns_list)-set(df['F52']))
+#creating list of varables representing output space
+Output_column_list=list(df['F52'])
+print(Output_column_list)
+
+#Scaling data using (x-µ)/sigma
+scaler= StandardScaler()
+df[Input_column_list]=scaler.fit_transform(df[Input_column_list])
+#the above operation was done to operate only othe data present in the input data list
+print(df)
+print(scaler.mean_)
+print(scaler.var_)
+print(df[Input_column_list].mean())
+print(df[Input_column_list].var())
+
+#computing covarience of the scaled data
+input_data=df[Input_column_list]
+output_data = df['F52']
+covariance_matrix=input_data.cov()
+print(covariance_matrix)
+
+#Computing the eigen values and eigen vectors of covariance matrix
+eig_vals,eig_vecs=np.linalg.eig(covariance_matrix.to_numpy())
+eig_pairs = [(np.abs(eig_vals[i]),eig_vecs[:,i]) for i in range(len(eig_vals))]
+
+#sort eigen value and eigen vector in ascending order
+eig_pairs.sort(key=lambda x:x[0],reverse=True )
+
+print('Eigenvalues in descending order:')
+for i in eig_pairs:
+    print(i[0])
+    
+#setting threshold at 95% variance
+threshold=0.95
+#computing cumulative variance captured by PC's
+print('Explained variance in percentage:\n')
+Total_variance=0.0
+count=0
+eigv_sum=np.sum(eig_vals)
+for i,j in enumerate(eig_pairs): #creates index for each pair
+    #i is for index and j[0] is for eigen values j[1]is for eigen vectors
+    variance_explained=(j[0]/eigv_sum).real
+    print('eigenvalue {}:{}'.format(i+1, (j[0]/eigv_sum).real*100))
+    Total_variance=Total_variance+variance_explained
+# first argument comes to first curly braces second argument comes to second curly braces    
+    count=count+1
+#using break command to come out of the for loop after meeting the threshhold
+    if(Total_variance>=threshold):
+        print(Total_variance)
+        break
+#creating new dimensions with the variables having maximum variance
+# this will map the eigen vectors corresponding to the 2 eigen vlaues
+reduced_dimension=np.zeros((len(eig_vecs),count))
+for i in range(count):
+    reduced_dimension[:,i]=eig_pairs[i][1]
+    print(reduced_dimension[:,i])
+    
+projected_data= df[Input_column_list].to_numpy().dot(reduced_dimension)
+projected_dataframe=pd.DataFrame(projected_data)
+
+projected_dataframe_df=pd.DataFrame(projected_dataframe,columns=['PC'+str(x) for x in range (1,41)])
+print('Explained variance :\n')
+print(np.cumsum(PCA_Sklearn.explained_variance_ratio_))
+
+#PCA using machine learning library
+import sklearnPCA
+
+# Choosing the extent of variance to be covered by PC's
+PCA_Sklearn=sklearnPCA(n_components=40)
+
+#Transforming the iris data input_column_list
+Projected_data_sklearn=PCA_Sklearn.fit_transform(df[Input_column_list])
+
+#storing the PC's in the data frame
+Projected_data_sklearn_df=pd.DataFrame(Projected_data_sklearn,columns=['PC'+str(x) for x in range (1,41)])
+print('Explained variance :\n')
+print(np.cumsum(PCA_Sklearn.explained_variance_ratio_))
+
+# Import train_test_split function
+from sklearn.model_selection import train_test_split
+# Split dataset into training set and test set
+X_train, X_test, y_train, y_test = train_test_split(input_data, output_data, test_size=0.3,random_state=109) # 70% training and 30% test
+#Import svm model
+from sklearn import linear_model
+from sklearn import svm
+
+classifiers = [
+    svm.SVR(kernel='linear'),
+    linear_model.SGDRegressor(),
+    linear_model.BayesianRidge(),
+    linear_model.LassoLars(),
+    linear_model.ARDRegression(),
+    linear_model.PassiveAggressiveRegressor(),
+    linear_model.TheilSenRegressor(),
+    linear_model.LinearRegression()]
+
+
+for item in classifiers:
+    print(item)
+    clf = item
+    clf.fit(X_train, y_train)
+y_pred= print(clf.predict(X_test),'\n')
+#accuracy_score is for classification tasks only. The score is calculated as follows
+clf.score(X_test, y_test)
+
+#from sklearn.ensemble import RandomForestRegressor 
+#rfr = RandomForestRegressor
+#rfr.score(X_test,y_test)
+
+
+
+#Create a svm Classifier
+#clf = svm.SVC(kernel='linear') # Linear Kernel
+
+#Train the model using the training sets
+#clf.fit(X_train, y_train)
+
+#Predict the response for test dataset
+#y_pred = clf.predict(X_test)
+
+#Import scikit-learn metrics module for accuracy calculation
+from sklearn import metrics
+
+# Model Precision: what percentage of positive tuples are labeled as such?
+#metrics.precision_score(y_test, y_pred)
+
+# Model Recall: what percentage of positive tuples are labelled as such?
+#print("Recall:",metrics.recall_score(y_test, y_pred))
